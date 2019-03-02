@@ -60,6 +60,19 @@ Switch(config)# interface fastethernet 5/4
  Switch(config-if)# duplex duplex {auto | half | full}
  ```
 
+CDP exchanges duplex information and can spot an issue.
+```
+%CDP-4-DUPLEX_MISMATCH: duplex mismatch discovered on FastEthernet0/13                   
+(not full duplex), with Switch1 FastEthernet0/13 (full duplex).
+```
+
+Interface counters may indicate duplex mismatch between switch and device.
+```
+switch1# sh int fa0/2
+! Lines omitted for brevity   
+54 output errors, 5 collisions, 0 interface resets
+0 babbles, 54 late collision, 59 deferred
+```
 
 
 Switches can dynamically detect the speed using couple methods:
@@ -116,6 +129,16 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 - When a switch port connects through cable to a single other nonhub device, no collisions can possibly occur.
 - Because collisions cannot occur, such segments can use *full-duplex* logic.
 
+### Ethernet Layer 2: Framing and Addressing
+
+**Frame:** refers to the bits and bytes that include the Layer 2 header and trailer, along with the data encapsulated by that header and trailer
+
+**Packet:** most often used to describe the Layer 3 header and data, without a Layer 2 header or trailer.
+
+
+|Preamble|SFD|Dest. Address|Src. Address|Length|DSAP|SSAP|Control|OUI|TYPE|Data|FCS|
+|:------:|:-:|:-----------:|:----------:|:----:|:--:|:--:|:-----:|:-:|:--:|:--:|:-:|
+|7B|1B|6B|6B|2B|1B|1B|1-2B|3B|2B|Variable|4B|
 
 
 # IPv6
