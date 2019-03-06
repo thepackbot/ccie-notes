@@ -79,6 +79,8 @@ Switches can dynamically detect the speed using couple methods:
 1. Fast Link Pulses (FLP) of the autonegotiation process.
 2. If autonegotiation is disabled on either end of the cable, the switch detects the speed anyway based on the incoming electrical signal
 
+For a good reference for more information on the actual FLPs used by autonegotiation, refer to the Fast Ethernet web page of the University of New Hampshire Research Computing Center’s InterOperability Laboratory, at www.iol.unh.edu/services/testing/fe/training/.
+
 Switches can only detect duplex settings through autonegotiation:
 - If both ends have autonegotiation enabled, the duplex is negotiated
 - If either device has autonegotiation disable, then devices w/o configured duplex will goto default setting.
@@ -129,7 +131,7 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 - When a switch port connects through cable to a single other nonhub device, no collisions can possibly occur.
 - Because collisions cannot occur, such segments can use *full-duplex* logic.
 
-### Ethernet Layer 2: Framing and Addressing
+## Ethernet Layer 2: Framing and Addressing
 
 **Frame:** refers to the bits and bytes that include the Layer 2 header and trailer, along with the data encapsulated by that header and trailer
 
@@ -139,6 +141,584 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 |Preamble|SFD|Dest. Address|Src. Address|Length|DSAP|SSAP|Control|OUI|TYPE|Data|FCS|
 |:------:|:-:|:-----------:|:----------:|:----:|:--:|:--:|:-----:|:-:|:--:|:--:|:-:|
 |7B|1B|6B|6B|2B|1B|1B|1-2B|3B|2B|Variable|4B|
+*802.3 Layer 2 Frame*
+
+- **Preamble**: Provides synchronization and signal transitions to allow proper clocking of tranmitted signal.
+
+- **SFD (Start of Frame Delimiter)**: Provide byte-level synchronization and to mark a new incoming frame.
+
+- **Dest./Src. Address: 48-bit MAC addresses.
+
+- **Length** Discribes the length, in bytes, of data following the Length field, up to the Either trailer.  Allows receiver to predeict the end of the received frame.
+
+### Types of Ethernet Addresses
+Unicast: Single LAN interface.  The I/G bit, the least significant bit in the most significant byte, is set to 0.
+- IEEE intends for unicast addresses to be unique in the universe
+
+Broadcast: All devices address.  Always hex value FFFFFFFFFFFF.
+
+Multicast: Implies some subset of devices on the LAB.  By definition, the I/G bit is set to 1.
+- Some devices may receive the frame, but discard it if not anticipating it.
+  - Non-joined mcast PCs can Rx an mcast frame for many reasons:
+    1. No switch support of mcast
+    2. No IGMP snooping enabled on the VLAN.
+    3. since there is a 32:1 overlap of IP Multicast addresses to Ethernet MAC addresses, any multicast address in the [224-239].0.0.x and [224-239].128.0.x ranges should NOT be considered.
+
+### Ethernet Address Formats
+
+**OUI:** Organizationally Unique Identifier (OUI).  The IEEE expects each manufacturer to use its OUI for the first 3 bytes of the MAC assigned to any Ethernet product created by that vendor.
+
+**MAC Byte Significance**
+
+|Most Significant Byte | | | | | Least Significant Byte |
+|-|-|-|-|-|-|
+| 1st Byte  |  2nd Byte  |  3rd Byte  |  4th Byte  | 5th Byte  |  6th Byte  |
+|OUI | -> | -> | Vendor-Assigned | -> | -> |
+
+
+
+**1st Byte Below**
+| | | | | | | U/L Bit | I/G Bit |
+|-|-|-|-|-|-|-|-|
+|bit|bit|bit|bit|bit|bit|bit|bit| 
+|Most significant Bit| | | | | | | Least significant Bit |
+
+IEEE documentation lists Ethernet addresses with the most significant byte on the left. However, inside each byte, the leftmost bit is the most significant bit, and the rightmost bit is the least significant bit.
+- Two most significant bits in an Ethernet address:
+  - Image The Individual/Group (I/G) bit
+    - Binary 0 means the address is unicast.  Binary 1 means the address is multicast or broadcast.
+    - Wireshark filter for any broadcast or multicast. ```(eth.dst[0] & 1)```
+    - Ethernet multicast addresses used by IP multicast implementations always start with 0x01005E. Hex 01 (the first byte of the address) converts to binary 00000001, with the least significant bit being 1, confirming the use of the I/G bit.
+  - Image The Universal/Local (U/L) bit
+    - Binary 0 means address was vendor assigned.  Binary 1 means address was administratively assigned, overriding the vendor-assigned address.
+
+### Protocol Types and the 802.3 Length Field
+**Type Field:** allows receiver of ethernet frame to determine type of data.  Ex.  IP, IPX, AppleTalk, etc.
+
+- DIX and the revised IEEE framing use the Type field, also called the Protocol Type field.
+- The originally defined IEEE framing uses those same 2 bytes as a Length field
+- Ethernet Type field values begin at 1536, and the length of the Data field in an IEEE frame is limited to decimal 1500 or less. That way, an Ethernet NIC can easily determine whether the frame follows the DIX or original IEEE format.
+- The original IEEE frame used a 1-byte Protocol Type field (DSAP) for the 802.2 LLC standard type field.
+
+### Switching and Bridging Logic
+
+Switches learn MAC addresses, and the port to associate with them, by reading the source MAC address of received frames. 
+
+| Type of Address | Switch Action |
+| - | - |
+| Known unicast | Forwards frame out the single interface associated with the dest. address.
+| Unknown unicast | Flood frame out all interafces, except the int on which the frame was Rx.| 
+| Broadcast | Floods frame identically to unknown unicasts|
+| Multicast | Floods frame identically to uknown unicasts, unless multicast optimizations are configured.|
+
+```
+Switch1# show mac-address-table dynamic
+          Mac Address Table
+------------------------------------------
+
+Vlan    Mac Address       Type       Ports
+----    -----------       ----       -----
+   1    000f.2343.87cd    DYNAMIC    Fa0/13                                            
+   1    0200.3333.3333    DYNAMIC    Fa0/3
+   1    0200.4444.4444    DYNAMIC    Fa0/13
+   ```
+   ```
+   switch4# show mac-address-table aging-time
+Vlan    Aging Time
+----    ----------
+   1     300                                  
+   ```
+
+## Switching Internal Processing Methods
+
+| Switching Methods | Description |
+|-|-|
+| Store-and-forward | The switch fully receives all bits in the frame (store) before forwarding the frame (forward).  This allows the switch to check the frame check sequence (FCS) before forwarding the frame, thus ensuring that errored frames are not forwarded.|
+| Cut-through | The switch performs the address table lookup as soon as the Dest. Add. field in the header is received.  The first bits in the frame can be sent out the oubound port before the final bits in the incoming frame are received.  This does not allow the switch to discard frames that fails the FCS check, but the forwarding action is faster, resulting in lower latency. |
+| Fragment-free | This performs like cut-throuh switching, but the switch waits for 64 bytes to be received before forwarding the first bytes of the outgoing frame.  According to Ethernet specifications, collisions should be detected during the first 64 bytes of the frame, so frames that are in error because of a collision will not be forwarded.|
+
+## SPAN, RSPAN, and ERSPAN
+
+_SPAN_ is Switch Port Analyzer
+- SPAN sessions can be sourced from a port or ports, or from a VLAN.
+- monitoring traffic for compliance reasons, for data collection purposes, or to support a particular application.
+- destination port for a SPAN session can be on the local switch, as in SPAN operation
+
+_RSPAN_ is Remote Switch Port Analyzer
+- a specific VLAN must be configured across the entire switching path from the source port or VLAN to the RSPAN destination port.
+  - This requires that the RSPAN VLAN be included in any trunks in that path, too.
+
+_ERSPAN_ is Encapsulated Remote Switch Port Analyzer
+- Encapped in GRE tunnel and sent to an IP
+- IP Protocol number 47, which is GRE. 47 in HEX is 2F, so the capture filter for this is ```ip proto 0x2f```
+
+### Core Concepts of SPAN, RSPAN, and ERSPAN
+
+SPAN
+- Source that consists of at least one port or at least one VLAN on a switch.
+- On the same switch, you configure a destination port.
+
+RSPAN
+- you create the same source type—at least one port or at least one VLAN.
+- destination for this session is the RSPAN VLAN, rather than a single port on the switch
+- At the switch that contains an RSPAN destination port, the RSPAN VLAN data is delivered to the RSPAN port.
+
+ERSPAN
+- creates a generic routing encapsulation (GRE) tunnel for all captured traffic and allows it to be extended across Layer 3 domains
+- operational enhancement brought to us by IOS-XE and can be found in current platforms like the ASR 1000, but keep in mind that ERSPAN is also supported by the Catalyst 6500, 7600, as well as the Nexus platforms.
+- Viable monitoring sources include Fast Ethernet, Gigabit Ethernet, and Port-Channel interfaces.
+
+Rules:
+- Regardless of the type of SPAN we are running, a SPAN source port can be any type of port—a routed port, a physical switch port, an access port, a trunk port, an EtherChannel port (either one physical port or the entire port-channel interface), and so on.
+- SPAN source VLAN, all active ports in that VLAN are monitored. A
+- A port configured as a SPAN destination cannot be part of a SPAN source VLAN.
+
+### SPAN Restrictions and Conditions
+**RESTRICTIONS**
+- When you configure a destination port, its original configuration is overwritten. If the SPAN configuration is removed, the original configuration on that port is restored.
+- When you configure a destination port, the port is removed from any EtherChannel bundle if it were part of one. If it were a routed port, the SPAN destination configuration overrides the routed port configuration.
+- Destination ports do not support port security, 802.1x authentication, or private VLANs. In general, SPAN/RSPAN and 802.1x are incompatible.
+- Destination ports do not support any Layer 2 protocols, including CDP, Spanning Tree, VTP, DTP, and so on.
+
+**CONDITIONS**
+ - The source can be either one or more ports or a VLAN, but not a mix of these.
+- Image Up to 64 SPAN destination ports can be configured on a switch.
+- Image Switched or routed ports can be configured as SPAN source ports or SPAN destination ports.
+- Image Be careful to avoid overloading the SPAN destination port. A 100-Mbps source port can easily overload a 10-Mbps destination port; it’s even easier to overload a 100-Mbps destination port when the source is a VLAN.
+- Image Within a single SPAN session, you cannot deliver traffic to a destination port when it is sourced by a mix of SPAN, RSPAN, or ERSPAN source ports or VLANs. This restriction comes into play when you want to mirror traffic to both a local port on a switch (in SPAN) and a remote port on another switch (in RSPAN or ERSPAN mode).
+- Image A SPAN destination port cannot be a source port, and a source port cannot be a destination port.
+- Image Only one SPAN/RSPAN/ERSPAN session can send traffic to a single destination port.
+-Image A SPAN destination port ceases to act as a normal switch port. That is, it passes only SPAN-related traffic.
+- Image It’s possible to configure a trunk port as the source of a SPAN or RSPAN session. In this case, all VLANs on the trunk are monitored by default; the filter vlan command option can be configured to limit the VLANs being monitored in this situation.
+- Image Traffic that is routed from another VLAN to a source VLAN cannot be monitored with SPAN. An easy way to understand this concept is that only traffic that enters or exits the switch in a source port or VLAN is forwarded in a SPAN session. In other words, if the traffic comes from another source within the switch (by routing from another VLAN, for example), that traffic isn’t forwarded through SPAN.
+
+### SPAN Types of Traffic
+PAN, RSPAN, and ERSPAN support three types of traffic: transmitted, received, and both. 
+- By default, SPAN is enabled for traffic both entering and exiting the source port or VLAN.
+- **For Receive (RX) SPAN**, the goal is to deliver all traffic received to the SPAN destination. As a result, each frame to be transported across a SPAN connection is copied and sent before any modification (for example, VACL or ACL filtering, QoS modification, or even ingress or egress policing).
+- **For Transmit (TX) SPAN**, all relevant filtering or modification by ACLs, VACLs, QoS, or policing actions are taken before the switch forwards the traffic to the SPAN/RSPAN destination. As a result, not all transmit traffic necessarily makes it to a SPAN destination. Also, the frames that are delivered do not necessarily match the original frames exactly, depending on policies applied before they are forwarded to the SPAN destination.
+- A special case applies to certain types of Layer 2 frames. SPAN/RSPAN **usually ignores CDP, spanning-tree BPDUs, VTP, DTP, and PAgP frames**. However, these traffic types can be forwarded along with the normal SPAN traffic if the encapsulation replicate command is configured.
+
+### Basic SPAN Configuration
+```
+MDF-ROC1# configure terminal
+MDF-ROC1(config)# monitor session 1 source interface fa0/12
+MDF-ROC1(config)# monitor session 1 destination interface fa0/24
+```
+### Complex SPAN Configuration
+Configure a switch to send the following traffic to interface fa0/24, preserving the encapsulation from the sources:
+
+- Received on interface fa0/18
+- Sent on interface fa0/9
+- Sent and received on interface fa0/19 (which is a trunk)
+
+We also filter (remove) VLANs 1, 2, 3, and 229 from the traffic coming from the fa0/19 trunk port.
+```
+MDF-ROC3# config term
+MDF-ROC3(config)# monitor session 11 source interface fa0/18 rx
+MDF-ROC3(config)# monitor session 11 source interface fa0/9 tx
+MDF-ROC3(config)# monitor session 11 source interface fa0/19
+MDF-ROC3(config)# monitor session 11 filter vlan 1 - 3 , 229
+MDF-ROC3(config)# monitor session 11 destination interface fa0/24 encapsulation replicate
+```
+### RSPAN Configuration
+we configure two switches, IDF-1 and IDF-2, to send traffic to RSPAN VLAN 199, which is delivered to port fa0/24 on switch MDF-SYR9 as follows:
+- From IDF-1, all traffic received on VLANs 66–68
+- From IDF-2, all traffic received on VLAN 9
+- From IDF-2, all traffic sent and received on VLAN 11
+
+Note that all three switches use a different session ID, which is permissible in RSPAN. The only limitation on session numbering is that the session number must be 1 to 66.
+```
+IDF-1# config term
+IDF-1(config)# vlan 199
+IDF-1(config-vlan)# remote span
+IDF-1(config-vlan)# exit
+IDF-1(config)# monitor session 3 source vlan 66 – 68 rx
+IDF-1(config)# monitor session 3 destination remote vlan 199
+```
+```
+IDF-2# config term
+IDF-2(config)# vlan 199
+IDF-2(config-vlan)# remote span
+IDF-2(config-vlan)# exit
+IDF-2(config)# monitor session 23 source vlan 9 rx
+IDF-2(config)# monitor session 23 source vlan 11
+IDF-2(config)# monitor session 23 destination remote vlan 199
+```
+```
+MDF-SYR9# config term
+MDF-SYR9(config)# vlan 199
+MDF-SYR9(config-vlan)# remote span
+MDF-SYR9(config-vlan)# exit
+MDF-SYR9(config)# monitor session 63 source remote vlan 199
+MDF-SYR9(config)# monitor session 63 destination interface fa0/24
+MDF-SYR9(config)# end
+```
+### ERSPAN Configuration
+
+Configure ASR 1002 to capture received traffic and send to it to Catalyst 6509 Gig2/2/1. This traffic will simply be captured, encapsulated in GRE by ASR 1002 natively, and routed over to the Catalyst 6509. A sniffing station on the 6500 attached to GE2/2/1 will see the complete Ethernet frame (L2 to L7) information.
+```
+ASR1002(config)# monitor session 1 type erspan-source
+ASR1002(config-mon-erspan-src)# source interface gig0/1/0 rx
+ASR1002(config-mon-erspan-src)# no shutdown
+ASR1002(config-mon-erspan-src)# destination
+ASR1002(config-mon-erspan-src-dst)# erspan-id 101
+ASR1002(config-mon-erspan-src-dst)# ip address 10.1.1.1
+ASR1002(config-mon-erspan-src-dst)# origin ip address 172.16.1.1
+```
+```
+!Now for the configuration of the Catalyst 6500
+SW6509(config)# monitor session 2 type erspan-destination
+SW6509(config-mon-erspan-dst)# destination interface gigabitEthernet2/2/1
+SW6509(config-mon-erspan-dst)# no shutdown
+SW6509(config-mon-erspan-dst)# source
+SW6509(config-mon-erspan-dst-src)# erspan-id 101
+SW6509(config-mon-erspan-dst-src)# ip address 10.1.1.1
+```
+```
+ASR1002# show monitor session 1
+Session 1
+---------
+Type                   : ERSPAN Source Session
+Status                 : Admin Enabled
+Source Ports           :
+   RX Only           : Gi0/1/0
+Destination IP Address : 10.1.1.1
+MTU                   : 1464
+Destination ERSPAN ID : 101
+Origin IP Address    : 172.16.1.1
+```
+
+## Virtual Switch System (VSS)
+* This feature exists in **Cisco Catalyst 6500 and 4500 Series** switches running IOS-XE
+* Simplifies the network by reducing the number of network elements, and this eliminates or masks the complexity of managing redundant switches and links
+* simplifies the network by reducing the number of network elements
+* eliminates or masks the complexity of managing redundant switches and links
+* VSS manages the redundant links in such a fashion that they will be seen by external devices as a single Port-channel.
+* simplifies network configuration and operation by reducing the total number of Layer 3 routing neighbors
+* simultaneously providing a loop-free Layer 2 topology.
+
+### Virtual Switching System
+* Fundamental reason for employing a VSS is to logically combine a pair of switches into a single network element,
+* Switch in the access layer connects to both switches of the VSS using one logical port channel because the VSS is perceived as being a single switch to external devices
+* Switches aren't independent, though physically different.
+  * must be understood that from an operation and control plane level, they are acting as one unit.
+  * enables a loop-free Layer 2 network topology.
+* simplifies the Layer 3 network topology by reducing the number of routing peers in the network, thus extending network simplification into the data plane itself.
+
+### VSS Active and VSS Standby Switch
+* Each individual switch will first contend for specific operational roles inside the VSS process itself and then behave according to those roles.
+* Each time that we create or restart a VSS, the peer switches will negotiate their roles. 
+* one device will become the VSS active switch, and the other will become the VSS standby.
+* **VSS active switch** controls the VSS, running the Layer 2 and Layer 3 control protocols for the switching modules on both switches.
+  * Provides management functions for the VSS, such as module online insertion and removal (OIR) and the console interface.
+* **VSS standby switch** sends all control traffic to the VSS active switch for processing.
+
+### Virtual Switch Link (VSL)
+Special link that carries control and data traffic between the two switches of a VSS
+* The VSL is typically implemented as an EtherChannel
+  * Can support up to eight links incorporated into the bundle
+* Optimized to provide _control and management plane traffic_ higher priority than data traffic in an effort to ensure that control and management messages are never discarded.
+* Data traffic is load balanced among the VSL links by either the default or the configured EtherChannel load-balancing algorithm.
+
+### Multichassis EtherChannel (MEC)
+Multichassis EtherChannel (MEC), which is an EtherChannel whose member ports can be distributed across the member switches in a VSS.
+* A VSS can support a maximum of **256 EtherChannels**. This limit applies to the total number of regular EtherChannels and MECs.
+* A special kind of Port-channel that can exist not between two physical devices, but between multiple chassis.
+* Layer 2 protocols operate on the EtherChannel as a single logical entity. 
+  * This extends to protocols like Spanning Tree Protocol, which would normally serve to block redundant links between devices in an effort to prevent the formation of switching loops.
+* Extends hardware/device failover not capable in normal EtherChannel.
+* Non-VSS switches connected to a VSS view the MEC as a standard EtherChannel
+  * Non-VSS switches can connect in a dual-homed manner
+* Traffic traversing the MEC can be load balanced locally within a VSS member switch much like that of standard EtherChannels.
+* Cisco MEC supports dynamic EtherChannel protocols:
+  * industry-standard Link Aggregation Control Protocol (LACP)
+  * the Cisco-proprietary Port Aggregation Protocol (PAgP)
+  * static EtherChannel configuration.
+
+### Basic VSS Configuration
+1. create the same *virtual switch domain* on both sides of the VSS (between 1 and 255).
+2. configure one switch to be switch number 1 and the other switch to be switch number 2.
+
+```
+SW1(config)# switch virtual domain 10
+Domain ID 10 config will take effect only
+after the exec command 'switch convert mode virtual' is issued
+SW1(config-vs-domain)# switch 1
+SW1(config-vs-domain)# exit
+
+SW2(config)# switch virtual domain 10
+Domain ID 10 config will take effect only
+after the exec command 'switch convert mode virtual' is issued
+SW2(config-vs-domain)# switch 2
+SW2(config-vs-domain)# exit
+```
+3. Create the VSL, which requires a unique port channel on each switch.
+
+**Note:** If the VSS standby switch VSL port channel number has been configured previously for another use, the VSS will come up in route processor redundancy mode. To avoid this situation, check that both port channel numbers are available on both of the peer switches.
+
+```
+SW1(config)# int port-channel 5
+SW1(config-if)# switchport
+SW1(config-if)# switch virtual link 1
+SW1(config-if)# no shut
+SW1(config-if)# exit
+*Jan 24 05:19:57.092: %SPANTREE-6-PORTDEL_ALL_VLANS: Port-channel5 deleted from all Vlans
+
+SW2(config)# int port-channel 10
+SW2(config-if)# switchport
+SW2(config-if)# switch virtual link 2
+SW2(config-if)# no shut
+SW2(config-if)# exit
+SW2(config)#
+*Jan 24 05:14:17.273: %SPANTREE-6-PORTDEL_ALL_VLANS: Port-channel10 deleted from all Vlans
+```
+4. Add VSL physical member ports to the appropriate Port-channel.
+
+**Note:** After the interfaces are put into a VSL Port-channel with the channel-group command, the interfaces go into “notconnect” status. Interface status will show “up,” but the line protocol will be “down.” The interface will be in up/down (not connect) status until the switch is rebooted.
+
+```
+SW1(config)# int range gig7/3 - 4
+SW1(config-if-range)# switchport mode trunk
+SW1(config-if-range)# channel-group 5 mode on
+WARNING: Interface GigabitEthernet7/3 placed in restricted config mode. All extraneous configs removed!
+WARNING: Interface GigabitEthernet7/4 placed in restricted config mode. All extraneous configs removed!
+SW1(config-if-range)# exit
+
+SW2(config)# int range gig4/45 - 46
+SW2(config-if-range)# switchport mode trunk
+SW2(config-if-range)# channel-group 10 mode on
+WARNING: Interface GigabitEthernet4/45 placed in restricted config mode. All extraneous configs removed!
+WARNING: Interface GigabitEthernet4/46 placed in restricted config mode. All extraneous configs removed!
+SW2(config-if-range)# exit
+```
+5. Complete the switch conversion process by implementing the switch convert mode virtual command on Switch 1
+
+```
+SW1# switch convert mode virtual
+
+This command will convert all interface names
+to naming convention "interface-type switch-number/slot/port",
+save the running config to startup-config and
+
+reload the switch.
+Do you want to proceed? [yes/no]: yes                                                                                  
+Converting interface names
+Building configuration...
+Compressed configuration from 6551 bytes to 2893 bytes[OK]
+Saving converted configuration to bootflash: ...
+Destination filename [startup-config.converted_vs-20130124-062921]?
+Please stand by while rebooting the system...
+Restarting system.
+
+Rommon (G) Signature verification PASSED
+Rommon (P) Signature verification PASSED
+FPGA   (P) Signature verification PASSED
+
+Similarly you need to enter the "switch convert mode virtual" command on Switch 2
+  for converting to Virtual Switch Mode.
+```
+```
+SW2# switch convert mode virtual
+
+This command will convert all interface names
+to naming convention "interface-type switch-number/slot/port",
+save the running config to startup-config and
+reload the switch.
+Do you want to proceed? [yes/no]: yes                                                                                  
+Converting interface names
+Building configuration...
+Compressed configuration from 6027 bytes to 2774 bytes[OK]
+Saving converted configuration to bootflash: ...
+Destination filename [startup-config.converted_vs-20130124-052526]?
+Please stand by while rebooting the system...
+Restarting system.
+
+Rommon (G) Signature verification PASSED
+Rommon (P) Signature verification PASSED
+FPGA   (P) Signature verification PASSED
+
+
+
+************************************************************
+*                                                          *
+* Welcome to Rom Monitor for   WS-X45-SUP7-E System.       *
+* Copyright (c) 2008-2012 by Cisco Systems, Inc.           *
+* All rights reserved.                                     *
+*                                                          *
+************************************************************
+```
+
+After confirmation is completed on each switch, the running configuration will be saved as the startup configuration and the switch will reboot. After the reboot, the switch will be in virtual switch mode.
+
+### VSS Verification Procedures
+
+```# show switch virtual``` will show *switch domain number*, and *the switch number* and *role* for each of the switches
+
+```
+SW1# sh switch virtual
+
+Executing the command on VSS member switch role = VSS Active, id = 1
+
+Switch mode                  : Virtual Switch
+Virtual switch domain number : 10
+Local switch number          : 1
+Local switch operational role: Virtual Switch Active
+Peer switch number           : 2
+Peer switch operational role : Virtual Switch Standby
+
+Executing the command on VSS member switch role = VSS Standby, id = 2
+
+Switch mode                  : Virtual Switch
+Virtual switch domain number : 10
+Local switch number          : 2
+Local switch operational role: Virtual Switch Standby
+Peer switch number           : 1
+Peer switch operational role : Virtual Switch Active
+```
+One of the most important operational requirements of a VSS is to ensure that one switch in the cluster is the active switch and the other is the standby.
+
+Console of the Standby Switch:
+```
+SW2-standby>
+Standby console disabled
+```
+
+```# show switch virtual role``` shows many other configuration variables for each switch in the Domain.
+
+```
+SW1# sh switch virtual role
+Executing the command on VSS member switch role = VSS Active, id = 1
+RRP information for Instance 1
+--------------------------------------------------------------------
+Valid Flags   Peer     Preferred Reserved
+               Count     Peer       Peer
+--------------------------------------------------------------------
+TRUE   V       1           1         1
+Switch Switch Status Preempt       Priority Role     Local   Remote
+       Number         Oper(Conf)   Oper(Conf)         SID     SID
+--------------------------------------------------------------------
+LOCAL   1     UP     FALSE(N )     100(100) ACTIVE   0       0
+REMOTE  2     UP     FALSE(N )     100(100) STANDBY 6834   6152
+
+Peer 0 represents the local switch
+
+Flags : V - Valid
+In dual-active recovery mode: No
+
+Executing the command on VSS member switch role = VSS Standby, id = 2
+
+RRP information for Instance 2
+
+--------------------------------------------------------------------
+Valid Flags   Peer     Preferred Reserved
+               Count     Peer       Peer
+
+--------------------------------------------------------------------
+TRUE    V       1           1         1
+
+Switch Switch Status Preempt       Priority Role     Local   Remote
+       Number         Oper(Conf)   Oper(Conf)         SID     SID
+--------------------------------------------------------------------
+LOCAL   2     UP     FALSE(N )     100(100) STANDBY  0       0
+REMOTE  1     UP     FALSE(N )     100(100) ACTIVE   6152   6834
+
+Peer 0 represents the local switch
+
+Flags : V - Valid
+In dual-active recovery mode: No
+```
+
+```# show switch virtual link``` shows information on the VSL
+
+```
+SW1# sh switch virtual link
+
+Executing the command on VSS member switch role = VSS Active, id = 1
+
+VSL Status : UP
+VSL Uptime : 3 minutes
+VSL Control Link : Gi1/7/4
+
+Executing the command on VSS member switch role = VSS Standby, id = 2
+
+VSL Status : UP
+VSL Uptime : 3 minutes
+VSL Control Link : Gi2/4/45
+```
+
+```# show switch virtual link port-channel``` verify information about the VSL port channel configuration
+
+```
+SW1# sh switch virtual link port-channel
+
+Executing the command on VSS member switch role = VSS Active, id = 1
+
+Flags: D - down       P - bundled in port-channel
+       I - stand-alone s - suspended
+       H - Hot-standby (LACP only)
+       R - Layer3     S - Layer2
+       U - in use     N - not in use, no aggregation
+       f - failed to allocate aggregator
+
+       M - not in use, no aggregation due to minimum links not met
+       m - not in use, port not aggregated due to minimum links not met
+       u - unsuitable for bundling
+       d - default port
+
+       w - waiting to be aggregated
+
+Group Port-channel Protocol   Ports
+------+-------------+-----------+-------------------
+5     Po5(SU)          -       Gi1/7/3(P) Gi1/7/4(P)
+10    Po10(SU)         -       Gi2/4/45(P) Gi2/4/46(P)
+
+Executing the command on VSS member switch role = VSS Standby, id = 2
+
+Flags: D - down       P - bundled in port-channel
+       I - stand-alone s - suspended
+       H - Hot-standby (LACP only)
+       R - Layer3     S - Layer2
+       U - in use     N - not in use, no aggregation
+       f - failed to allocate aggregator
+
+       M - not in use, no aggregation due to minimum links not met
+       m - not in use, port not aggregated due to minimum links not met
+       u - unsuitable for bundling
+       d - default port
+
+       w - waiting to be aggregated
+
+Group Port-channel Protocol   Ports
+------+-------------+-----------+-------------------
+5     Po5(SU)          -       Gi1/7/3(P) Gi1/7/4(P)
+10    Po10(SU)         -       Gi2/4/45(P) Gi2/4/46(P)
+
+SW1#
+```
+
+## IOS-XE
+* IOS was monolithic.  Not able to keep up with software demands.
+  * Evolved in NX-OS, IOS-XR, and IOS-XE.
+* IOS-XE was designed for routers, switches, and appliances.
+* seamlessly integrates a generic approach to network management into every function, borrowing heavily from the equally reliable POSIX operating system
+* all the advantages of traditional IOS and its unparalleled history for delivering functionality for business-critical applications.
+  * while retaining the same look and feel of IOS, but doing it while ensuring enhanced “future-proof” functionality.
+* IOS-XE runs a modern Linux operating system that employs a single daemon.
+  * running IOS and these other applications as separate processes, it becomes apparent that we can now leverage symmetrical multiprocessing.
+  * should one of these isolated processes fail, it will not affect the kernel. 
+  * garner the benefits of load balancing across multiple-core CPUs by binding processes to different cores.
+  * operational environment where it is possible to support multithreading and multicore CPUs
+* IOS-XE separates the control plane from the forwarding plane, ensures a level of management and control that could not possibly exist in the context of the traditional monolithic IOS.
+* application designers will have the ability to build drivers for new data plane ASICs and have them interoperate with sets of standard APIs.
+  * these APIs that will then create control plane and data plane processing separation.
+
+As a result of the modular architecture that we have attributed to IOS-XE, we see both a logical and a physical isolation of the control and data planes themselves. This at first might seem to be a subtle difference, but in fact, this has far-reaching benefits. Now we have physical separation of the three planes through modular blades that are installed into the chassis, each having dedicated hardware resources. IOS-XE also maintains logical separation as an abstraction layer. We get even more capabilities to reduce failure domains within the routing system, as well as the capability to isolate operation loads between planes. An example of this would be heavy stress caused by forwarding massive amounts of traffic in the data plane, which would have no impact on the control plane running on the same chassis. This is made possible by the fact that IOS-XE runs a separate driver instance for each bay or blade slot in the chassis; therefore, one drive failing will have no impact on the other bays or the chassis as a whole. The outcome is that all the other processes will continue to forward traffic. In addition to this, we can actually patch individual drivers without bringing down the entire chassis.
+
+This separation is achieved through the **Forwarding and Feature Manager (FFM)** and the **Forwarding Engine Driver (FED)**.
+
+The FFM provides a set of APIs used to manage the control plane processes. The resulting outcome is that the FFM programs the data plane through the FED and maintains all forwarding states for the system. It is the FED that allows the drivers to affect the data plane, and it is provided by the platform.
+
 
 
 # IPv6
@@ -146,8 +726,6 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 - Host assigns itself an address.
 - MAC address is converted into a 64-bit identifier, called a Modified EUI-64.  Then appended to a 64 bit network prefix learned by other means.
 - Eliminates need for static or DHCP.
-
-
 
 ### How it's made
 1. Take 48-bit MAC address
