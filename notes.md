@@ -47,12 +47,12 @@ PC network interface card (NIC) transmits on pair 1,2 and receives on pair 3,6; 
 ### Autonegotiation, Speed, and Duplex
 By default, each Cisco switch port uses Ethernet autonegotiation to determine the speed and duplex setting (half or full).
 To disable autonegotiation on a Cisco switch port, you simply need to statically configure the speed and the duplex settings.
-* Can set speed with subinterface command
+* Can set speed with sub-interface command
 ```
 Switch(config)# interface fastethernet 5/4
  Switch(config-if)# speed speed {auto | 10 | 100 | 1000}
  ```
-* Can set duplex with subinterface command
+* Can set duplex with sub-interface command
 
 *Note: you cannot set duplex until the speed is manually configured*
 ```
@@ -90,9 +90,9 @@ Full duplex (FDX) is only available when collisions cannot occur on attached cab
 - Collision-free links are only guaranteed when a shared hub is **NOT** in use.
 
 ### CSMA/CD
-- The orinal Ethernet spec. expected collisions to occur.
-- Media was shared, creating a literal eletrical bus.
-  - Any signal inuced onto wire could collide with another induced signal from another device.
+- The original Ethernet spec. expected collisions to occur.
+- Media was shared, creating a literal electrical bus.
+  - Any signal induced onto wire could collide with another induced signal from another device.
 - When two or more Ethernet frames overlap on the transmission medium at the same instant in time, a collision occurs; the collision results in bit errors and lost frames.
 
 CSMA/CD minimizes the number of collisions, but when they occur, CSMA/CD defines how the sending stations can recognize the collisions and retransmit the frame.
@@ -128,7 +128,7 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 - Switches have the same cabling and signal regeneration benefits as hubs
 - sometimes reducing or even eliminating collisions by buffering frames
 - When switches receive multiple frames on different switch ports, they store the frames in memory buffers to prevent collisions.
-- When a switch port connects through cable to a single other nonhub device, no collisions can possibly occur.
+- When a switch port connects through cable to a single other non-hub device, no collisions can possibly occur.
 - Because collisions cannot occur, such segments can use *full-duplex* logic.
 
 ## Ethernet Layer 2: Framing and Addressing
@@ -143,13 +143,13 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 |7B|1B|6B|6B|2B|1B|1B|1-2B|3B|2B|Variable|4B|
 *802.3 Layer 2 Frame*
 
-- **Preamble**: Provides synchronization and signal transitions to allow proper clocking of tranmitted signal.
+- **Preamble**: Provides synchronization and signal transitions to allow proper clocking of transmitted signal.
 
 - **SFD (Start of Frame Delimiter)**: Provide byte-level synchronization and to mark a new incoming frame.
 
 - **Dest./Src. Address: 48-bit MAC addresses.
 
-- **Length** Discribes the length, in bytes, of data following the Length field, up to the Either trailer.  Allows receiver to predeict the end of the received frame.
+- **Length** Describes the length, in bytes, of data following the Length field, up to the Either trailer.  Allows receiver to predict the end of the received frame.
 
 ### Types of Ethernet Addresses
 Unicast: Single LAN interface.  The I/G bit, the least significant bit in the most significant byte, is set to 0.
@@ -193,7 +193,7 @@ IEEE documentation lists Ethernet addresses with the most significant byte on th
     - Binary 0 means address was vendor assigned.  Binary 1 means address was administratively assigned, overriding the vendor-assigned address.
 
 ### Protocol Types and the 802.3 Length Field
-**Type Field:** allows receiver of ethernet frame to determine type of data.  Ex.  IP, IPX, AppleTalk, etc.
+**Type Field:** allows receiver of Ethernet frame to determine type of data.  Ex.  IP, IPX, AppleTalk, etc.
 
 - DIX and the revised IEEE framing use the Type field, also called the Protocol Type field.
 - The originally defined IEEE framing uses those same 2 bytes as a Length field
@@ -207,9 +207,9 @@ Switches learn MAC addresses, and the port to associate with them, by reading th
 | Type of Address | Switch Action |
 | - | - |
 | Known unicast | Forwards frame out the single interface associated with the dest. address.
-| Unknown unicast | Flood frame out all interafces, except the int on which the frame was Rx.| 
-| Broadcast | Floods frame identically to unknown unicasts|
-| Multicast | Floods frame identically to uknown unicasts, unless multicast optimizations are configured.|
+| Unknown unicast | Flood frame out all interfaces, except the int on which the frame was Rx.| 
+| Broadcast | Floods frame identically to unknown unicast|
+| Multicast | Floods frame identically to unknown unicast, unless multicast optimizations are configured.|
 
 ```
 Switch1# show mac-address-table dynamic
@@ -234,8 +234,8 @@ Vlan    Aging Time
 | Switching Methods | Description |
 |-|-|
 | Store-and-forward | The switch fully receives all bits in the frame (store) before forwarding the frame (forward).  This allows the switch to check the frame check sequence (FCS) before forwarding the frame, thus ensuring that errored frames are not forwarded.|
-| Cut-through | The switch performs the address table lookup as soon as the Dest. Add. field in the header is received.  The first bits in the frame can be sent out the oubound port before the final bits in the incoming frame are received.  This does not allow the switch to discard frames that fails the FCS check, but the forwarding action is faster, resulting in lower latency. |
-| Fragment-free | This performs like cut-throuh switching, but the switch waits for 64 bytes to be received before forwarding the first bytes of the outgoing frame.  According to Ethernet specifications, collisions should be detected during the first 64 bytes of the frame, so frames that are in error because of a collision will not be forwarded.|
+| Cut-through | The switch performs the address table lookup as soon as the Dest. Add. field in the header is received.  The first bits in the frame can be sent out the outbound port before the final bits in the incoming frame are received.  This does not allow the switch to discard frames that fails the FCS check, but the forwarding action is faster, resulting in lower latency. |
+| Fragment-free | This performs like cut-through switching, but the switch waits for 64 bytes to be received before forwarding the first bytes of the outgoing frame.  According to Ethernet specifications, collisions should be detected during the first 64 bytes of the frame, so frames that are in error because of a collision will not be forwarded.|
 
 ## SPAN, RSPAN, and ERSPAN
 
@@ -708,7 +708,7 @@ SW1#
   * running IOS and these other applications as separate processes, it becomes apparent that we can now leverage symmetrical multiprocessing.
   * should one of these isolated processes fail, it will not affect the kernel. 
   * garner the benefits of load balancing across multiple-core CPUs by binding processes to different cores.
-  * operational environment where it is possible to support multithreading and multicore CPUs
+  * operational environment where it is possible to support multi-threading and multicore CPUs
 * IOS-XE separates the control plane from the forwarding plane, ensures a level of management and control that could not possibly exist in the context of the traditional monolithic IOS.
 * application designers will have the ability to build drivers for new data plane ASICs and have them interoperate with sets of standard APIs.
   * these APIs that will then create control plane and data plane processing separation.
@@ -738,7 +738,7 @@ The FFM provides a set of APIs used to manage the control plane processes. The r
 *IEEE has chosen FFFE as a reserved value that can only appear in EUI-64 generated from the EUI-48 MAC address.*
 
 4. Finally, the seventh bit from the left, or the universal/local (U/L) bit, needs to be inverted. 
-- Determines if officialy assigned or locally generated
+- Determines if officially assigned or locally generated
 - If it is 0, the address is locally administered
 - If it is 1, the address is globally unique
 - In the original OUI portion, the globally unique addresses assigned by the IEEE have their U/L bit always set to 0, whereas locally created addresses have it set to 1
@@ -783,7 +783,7 @@ R1# show ipv6 interface FastEthernet0/1 | include EUI
 
 ## IPv6 Neighbor Discovery
 
-Neighbor Discovery protocol is in fact an umbrella term for many interrelated subprotocols and mechanisms whose main responsibilities include the following:
+Neighbor Discovery protocol is in fact an umbrella term for many interrelated sub-protocols and mechanisms whose main responsibilities include the following:
 
 - Resolution of IPv6 addresses into MAC addresses of neighboring hosts
 - Duplicate address detection
@@ -808,7 +808,7 @@ _Neighbor Discovery functions added to ICMPv6 are related to facilitating commun
 
 2. **Router Solicitation**
 - Sent by node when interface is enabled
-- Used to get **Router Advertisments** from local link routers.  Beats waiting for scheduled advertisements.
+- Used to get **Router Advertisements** from local link routers.  Beats waiting for scheduled advertisements.
 
 3. **Redirect:** Redirect messages are used by routers to tell hosts that a better on-link router exists for a given destination address.
 
