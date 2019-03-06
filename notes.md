@@ -73,7 +73,19 @@ switch1# sh int fa0/2
 54 output errors, 5 collisions, 0 interface resets
 0 babbles, 54 late collision, 59 deferred
 ```
+### Type of Ethernet
 
+|Type of Ethernet| General Descripton |
+|-|-|
+|10BASE5| Thicknet; used coaxial|
+|10BASE2| Thinnet; used coaxial|
+|10BASE-T| First type of Ethernet using twisted pair cabling|
+|DIX Ethernet v2| Layer1 and Layer2 specs for original Ethernet, from DIX, typically called DIX v2|
+|IEEE 802.3| Called MAC because of the name IEEE committee (Media Access Control); orig. Layer 1 and 2 specs, standardized using DIX v2 as a basis|
+|IEEE 802.2| Called LLC becuase of the name of the IEEE committee (Logical Link Control); Layer 2 spec for headers common to multiple IEEE LAN specs.|
+| IEEE 802.3u| IEEE standard for Fast Ethernet (100Mbps) over copper and optical ; typically called FastE|
+| IEEE 802.3z| Gigabit Ethernet over optical cabling; typically called GigE|
+| IEEE 802.3ab| Gigabit Ethernet over copper cabling|
 
 Switches can dynamically detect the speed using couple methods:
 1. Fast Link Pulses (FLP) of the autonegotiation process.
