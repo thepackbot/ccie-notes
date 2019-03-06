@@ -141,13 +141,14 @@ NICs operating in *HDX* mode use *loopback circuitry* when transmitting a frame.
 |Preamble|SFD|Dest. Address|Src. Address|Length|DSAP|SSAP|Control|OUI|TYPE|Data|FCS|
 |:------:|:-:|:-----------:|:----------:|:----:|:--:|:--:|:-----:|:-:|:--:|:--:|:-:|
 |7B|1B|6B|6B|2B|1B|1B|1-2B|3B|2B|Variable|4B|
+
 *802.3 Layer 2 Frame*
 
 - **Preamble**: Provides synchronization and signal transitions to allow proper clocking of transmitted signal.
 
 - **SFD (Start of Frame Delimiter)**: Provide byte-level synchronization and to mark a new incoming frame.
 
-- **Dest./Src. Address: 48-bit MAC addresses.
+- **Dest./Src. Address:** 48-bit MAC addresses.
 
 - **Length** Describes the length, in bytes, of data following the Length field, up to the Either trailer.  Allows receiver to predict the end of the received frame.
 
