@@ -1006,3 +1006,86 @@ FF02::1:FF00:1 | 33-33-FF-00-00-01 | SNM based on the Global unicast IPv6 addres
 FF02::1:FF11:1111 | 33-33-FF-11-11-11 | SNM based on the Link Local IPv6 address
 
 _"SNM" stands for Solicited Node Multicast_
+
+
+# VLANS
+- Normal-range: VLANs 1–1005
+- Extended: 1006-4095
+ - 802.1q was first to support 12-bit VLAN ID field for Extended range (2^12 = 4096).
+ - Following that, Cisco changed ISL to use 12 of it's reserved 15 bits to support Extended Range VLANs.
+- VLANs have an operational state: active (default), or suspended.
+ - A suspended VLAN is hibernating. It exists, but my not pass traffic.  Access ports in this VLAN drop all frames.
+ 
+
+# Private VLAN
+- There is a Primary VLAN, and the private VLANs are secondary to it.
+- Each primary VLAN can only have one Isolated VLAN. Having multiple makes no sense.
+- There may be many community VLANs per primary.
+ - Ports in the same community may communicate.
+- Isolated ports may not speak to anything accept a Promiscuous port.
+- Promiscous ports are used for link to the gateway.
+- A device on promiscious port can communicate with all secondary VLANs associated with primary and vice versa.
+- If a frame from a secondary VLAN is passed through a trunk port, it's tagged using the corresponding primary VLAN.
+
+# DTP (Dynamic Trunking Protocol)
+- Cisco technology
+- It is used for auto trunk negotiation.
+- Depending on the Catalyst generation, the switchport defaults differ.
+ - Catalyst 2950 and 3550 models default '''switchport mode dynamic desirable'''
+ - Catalyst models, such as 2960, 3560 or 3750, default '''switchport mode dynamic auto'''
+- If one of the sides is desirable, then a trunk is negotiated.
+- When negotiated, then trunk interface bounces.
+- If a switch supports 802.1q and ISL (Inter-Switch Link) encapsulation, then ISL is used.
+- A trunks encapsulation can be changed on the fly without bouncing the port.
+- CDP can be used to detect native VLAN mismatch.
+- Switches will only negotiate a link if the VTP domain name matches, or one switch has no VTP domain name configured (NULL).
+ - This prevents accidental overwrites of VLANs.  You wouldn't want switches in different VTP domains to auto trunk to eachother.
+ - Routers do not support DTP, so you must manually configure them to support trunking.
+ - The TOS/TAS/TNS stand for Trunk Operating/Administrative/Negotiation Status! The TOT/TAT/TNT stand for Trunk Operating/Administrative/Negotiation Type
+ 
+ # ISL and 802.1q Trunking
+ - ISL adds a new 26-byte header, plus a new trailer (to allow for the new FCS value), encapsulating the entire original frame.
+ - 802.1Q inserts a 4-byte header, called a tag, into the original frame (right after the Source Address field). The original frame’s addresses are left intact.
+ - You can configure 802.1Q native VLANs under a subinterface or under the physical interface on a router. Use the '''encapsulation dot1q vlan-id native''' subcommand.
+ - Alternately, if not configured on a subinterface, the router assumes that the native VLAN is associated with the physical interface.
+ 
+ # Jumbo Frames
+ - '''system mtu 1504''' Applies to 100Mbps interfaces
+ - '''system mtu jumbo 1504''' Applies to 1Gbps and 10Gbps interfaces
+ 
+ # VLAN Tagging on WAN
+ - Today, several emerging alternatives exist for the passage of VLAN traffic across a WAN, including 802.1Q-in-Q, its standardized version 802.1ad called Provider Bridges, another standard 802.1ah called Provider Backbone Bridges, Layer2 Tunneling Protocol (L2TPv3), Ethernet over MPLS (EoMPLS), and VLAN Private LAN Services (VPLS). While these topics are more applicable to the CCIE Service Provider certification, you should at least know the concept of 802.1 Q-in-Q tunneling.
+ - Also known as Q-in-Q on Catalyst switches, 802.1Q-in-Q allows an SP to preserve 802.1Q VLAN tags across a WAN service. By doing so, VLANs actually span multiple geographically dispersed sites.
+  - The ingress SP switch takes the 802.1Q frame, and then tags each frame entering the interface with an additional 802.1Q header, called the S-tag (the original customer tags are called C-tags and are not modified nor processed).
+- On Catalyst switches, the Q-in-Q is supported on 3550 and higher platforms
+
+# VTPv1 and VTPv2
+- In any VTP version, messages Transmitted and accepted on trunk ports only.
+- Access ports do not send nor accept VTP messages.
+- VTPv1 is default active version on enterprise IOS-based switches.
+- VTPv1 and VTPv2 only support Normal range VLANs.
+ - Can be configured in vlan database or config mode.  Stored in vlan.dat in Flash.
+- Avoid using VLANs 1006–1024 for compatibility with CatOS-based switches.
+- Defaults to VTPv1. No password, no domain name.  Doesn't send updates.
+
+
+# VTPv3
+- VTPv3 introduces '''vtp mode off''' to disable globally, or per-interface basis with '''no vtp''' on the interface.
+- VTPv3 if in any mode (server, client, transparent, or off) the normal and extended-range VLANs are stored in vlan.dat.  If tranparent, or off mode, then VLANs are also present in the running-config.
+- VTPv3 supports Extended range VLANs (1006-4095).
+- Supports many Servers, but only one Primary server.
+ - Promote a Server to Primary status with an EXEC '''vtp primary'''.
+ - The state of Primary Server is not stored in config.  It's a runtime state.
+- VTPv3 no longer lets you reset the configuraton revision number back to 0 by setting the switch to Transparent mode and back.
+  - In VTPv3, if you want to reset the config rev. # you must change the domain name, or configure a password.
+- Cooperation between VTPv3 and VTPv1-only switches is not supported.
+- TPv3 switch detects an older switch running VTPv1 or VTPv2 on its port, it will revert to VTPv2 operation on that port, forcing the older switch to operate in VTPv2 mode.
+
+# PPPoE
+- PPPoE virtualizes Ethernet into multiple point-to-point sessions between client hosts and an access concentrator, turning the broadcast Ethernet into a point-to-multipoint environment.
+- The PPPoE client feature permits a Cisco IOS router, rather than an endpoint host, to serve as the client in a network.
+  - Lets entire LANs connect to Internet, because router is inline and can NAT.
+- In a DSL environment, PPP interface IP addresses are derived from an upstream DHCP server using IP Configuration Protocol (IPCP), a subprotocol of PPP. Therefore, IP address negotiation must be enabled on the router’s dialer interface. This is done using the ip address negotiated command in the dialer interface configuration.
+- MTU should be 1492.  PPPoE introduces an 8-byte overhead (2 bytes for the PPP header and 6 bytes for PPPoE).
+- TCP sessions should negotiate Maximum Segment Size down to 1452 bytes, allowing for 40 bytes in TCP and IP headers and 8 bytes in the PPPoE, totaling 1500 bytes that must fit into an ordinary Ethernet frame.
+- The key difference between ISDN BRI configuration and PPPoE is the pppoe-client dial-pool-number command.
