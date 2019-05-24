@@ -1040,9 +1040,11 @@ _"SNM" stands for Solicited Node Multicast_
 - CDP can be used to detect native VLAN mismatch.
 - Switches will only negotiate a link if the VTP domain name matches, or one switch has no VTP domain name configured (NULL).
  - This prevents accidental overwrites of VLANs.  You wouldn't want switches in different VTP domains to auto trunk to eachother.
+ 
  '''
  May 24 10:15:29.796: %DTP-5-DOMAINMISMATCH: Unable to perform trunk negotiation on port Et0/1 because of VTP domain mismatch.
 '''
+
  - Routers do not support DTP, so you must manually configure them to support trunking.
  - The TOS/TAS/TNS stand for Trunk Operating/Administrative/Negotiation Status! The TOT/TAT/TNT stand for Trunk Operating/Administrative/Negotiation Type
  
