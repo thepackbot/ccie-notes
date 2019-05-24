@@ -1031,8 +1031,8 @@ _"SNM" stands for Solicited Node Multicast_
 - Cisco technology
 - It is used for auto trunk negotiation.
 - Depending on the Catalyst generation, the switchport defaults differ.
- - Catalyst 2950 and 3550 models default '''switchport mode dynamic desirable'''
- - Catalyst models, such as 2960, 3560 or 3750, default '''switchport mode dynamic auto'''
+ - Catalyst 2950 and 3550 models default ```switchport mode dynamic desirable```
+ - Catalyst models, such as 2960, 3560 or 3750, default ```switchport mode dynamic auto```
 - If one of the sides is desirable, then a trunk is negotiated.
 - When negotiated, then trunk interface bounces.
 - If a switch supports 802.1q and ISL (Inter-Switch Link) encapsulation, then ISL is used.
@@ -1041,9 +1041,9 @@ _"SNM" stands for Solicited Node Multicast_
 - Switches will only negotiate a link if the VTP domain name matches, or one switch has no VTP domain name configured (NULL).
  - This prevents accidental overwrites of VLANs.  You wouldn't want switches in different VTP domains to auto trunk to eachother.
  
- '''
+ ```
  May 24 10:15:29.796: %DTP-5-DOMAINMISMATCH: Unable to perform trunk negotiation on port Et0/1 because of VTP domain mismatch.
-'''
+```
 
  - Routers do not support DTP, so you must manually configure them to support trunking.
  - The TOS/TAS/TNS stand for Trunk Operating/Administrative/Negotiation Status! The TOT/TAT/TNT stand for Trunk Operating/Administrative/Negotiation Type
@@ -1051,12 +1051,12 @@ _"SNM" stands for Solicited Node Multicast_
  # ISL and 802.1q Trunking
  - ISL adds a new 26-byte header, plus a new trailer (to allow for the new FCS value), encapsulating the entire original frame.
  - 802.1Q inserts a 4-byte header, called a tag, into the original frame (right after the Source Address field). The original frame’s addresses are left intact.
- - You can configure 802.1Q native VLANs under a subinterface or under the physical interface on a router. Use the '''encapsulation dot1q vlan-id native''' subcommand.
+ - You can configure 802.1Q native VLANs under a subinterface or under the physical interface on a router. Use the ```encapsulation dot1q vlan-id native``` subcommand.
  - Alternately, if not configured on a subinterface, the router assumes that the native VLAN is associated with the physical interface.
  
  # Jumbo Frames
- - '''system mtu 1504''' Applies to 100Mbps interfaces
- - '''system mtu jumbo 1504''' Applies to 1Gbps and 10Gbps interfaces
+ - ```system mtu 1504``` Applies to 100Mbps interfaces
+ - ```system mtu jumbo 1504``` Applies to 1Gbps and 10Gbps interfaces
  
  # VLAN Tagging on WAN
  - Today, several emerging alternatives exist for the passage of VLAN traffic across a WAN, including 802.1Q-in-Q, its standardized version 802.1ad called Provider Bridges, another standard 802.1ah called Provider Backbone Bridges, Layer2 Tunneling Protocol (L2TPv3), Ethernet over MPLS (EoMPLS), and VLAN Private LAN Services (VPLS). While these topics are more applicable to the CCIE Service Provider certification, you should at least know the concept of 802.1 Q-in-Q tunneling.
@@ -1078,22 +1078,22 @@ _"SNM" stands for Solicited Node Multicast_
 ## Migrating from VTPv1/2 to 3
 - Cannot change a Client's version without first going to Transparent mode.
 
-'''
+```
 IOU2(config)#vtp version 2
 Cannot modify version in VTP client mode unless the system is in VTP version 3
 IOU2(config)#vtp mode transparent 
 Setting device to VTP Transparent mode for VLANS.
 IOU2(config)#vtp version 2        
 IOU2(config)#
-'''
+```
 
 
 # VTPv3
-- VTPv3 introduces '''vtp mode off''' to disable globally, or per-interface basis with '''no vtp''' on the interface.
+- VTPv3 introduces ```vtp mode off``` to disable globally, or per-interface basis with ```no vtp``` on the interface.
 - VTPv3 if in any mode (server, client, transparent, or off) the normal and extended-range VLANs are stored in vlan.dat.  If tranparent, or off mode, then VLANs are also present in the running-config.
 - VTPv3 supports Extended range VLANs (1006-4095).
 - Supports many Servers, but only one Primary server.
- - Promote a Server to Primary status with an EXEC '''vtp primary'''.
+ - Promote a Server to Primary status with an EXEC ```vtp primary```.
  - The state of Primary Server is not stored in config.  It's a runtime state.
 - VTPv3 no longer lets you reset the configuraton revision number back to 0 by setting the switch to Transparent mode and back.
   - In VTPv3, if you want to reset the config rev. # you must change the domain name, or configure a password.
