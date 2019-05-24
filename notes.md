@@ -1040,6 +1040,9 @@ _"SNM" stands for Solicited Node Multicast_
 - CDP can be used to detect native VLAN mismatch.
 - Switches will only negotiate a link if the VTP domain name matches, or one switch has no VTP domain name configured (NULL).
  - This prevents accidental overwrites of VLANs.  You wouldn't want switches in different VTP domains to auto trunk to eachother.
+ '''
+ May 24 10:15:29.796: %DTP-5-DOMAINMISMATCH: Unable to perform trunk negotiation on port Et0/1 because of VTP domain mismatch.
+'''
  - Routers do not support DTP, so you must manually configure them to support trunking.
  - The TOS/TAS/TNS stand for Trunk Operating/Administrative/Negotiation Status! The TOT/TAT/TNT stand for Trunk Operating/Administrative/Negotiation Type
  
@@ -1059,14 +1062,28 @@ _"SNM" stands for Solicited Node Multicast_
   - The ingress SP switch takes the 802.1Q frame, and then tags each frame entering the interface with an additional 802.1Q header, called the S-tag (the original customer tags are called C-tags and are not modified nor processed).
 - On Catalyst switches, the Q-in-Q is supported on 3550 and higher platforms
 
-# VTPv1 and VTPv2
+# VTP
 - In any VTP version, messages Transmitted and accepted on trunk ports only.
 - Access ports do not send nor accept VTP messages.
+
+# VTPv1 and VTPv2
 - VTPv1 is default active version on enterprise IOS-based switches.
 - VTPv1 and VTPv2 only support Normal range VLANs.
  - Can be configured in vlan database or config mode.  Stored in vlan.dat in Flash.
 - Avoid using VLANs 1006–1024 for compatibility with CatOS-based switches.
 - Defaults to VTPv1. No password, no domain name.  Doesn't send updates.
+
+## Migrating from VTPv1/2 to 3
+- Cannot change a Client's version without first going to Transparent mode.
+
+'''
+IOU2(config)#vtp version 2
+Cannot modify version in VTP client mode unless the system is in VTP version 3
+IOU2(config)#vtp mode transparent 
+Setting device to VTP Transparent mode for VLANS.
+IOU2(config)#vtp version 2        
+IOU2(config)#
+'''
 
 
 # VTPv3
