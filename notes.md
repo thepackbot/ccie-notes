@@ -1075,7 +1075,7 @@ _"SNM" stands for Solicited Node Multicast_
 - Avoid using VLANs 1006–1024 for compatibility with CatOS-based switches.
 - Defaults to VTPv1. No password, no domain name.  Doesn't send updates.
 
-## Migrating from VTPv1/2 to 3
+## VTP Changing Version
 - Cannot change a Client's version without first going to Transparent mode.
 
 ```
