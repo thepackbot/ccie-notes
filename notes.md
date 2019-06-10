@@ -1108,3 +1108,49 @@ IOU2(config)#
 - MTU should be 1492.  PPPoE introduces an 8-byte overhead (2 bytes for the PPP header and 6 bytes for PPPoE).
 - TCP sessions should negotiate Maximum Segment Size down to 1452 bytes, allowing for 40 bytes in TCP and IP headers and 8 bytes in the PPPoE, totaling 1500 bytes that must fit into an ordinary Ethernet frame.
 - The key difference between ISDN BRI configuration and PPPoE is the pppoe-client dial-pool-number command.
+
+
+# Spanning Tree Protocol (IEEE/Legacy/802.1D)
+
+Bridge and Switch mean same thing.
+
+Cisco's uses a PVST (Per-VLAN Spanning Tree), vs. ieee where all VLANs map to single STP instance.
+
+## STP BPDUs
+- For STP, the Protocol Identifier value is set to 0x0000 and the Protocol Version is also set to 0x00.
+- The BPDU Type field identifies two kinds of STP BPDUs: Configuration BPDUs (type 0x00) and Topology Change Notification BPDUs (type 0x80). 
+
+## General Operation
+
+1. Elect Root bridge
+- Only one root bridge per instance.
+- Select the lowest Bridge ID (BID) in the network to become Root Bridge
+ - Can be set manually:
+   - ```spanning-tree vlan [vlan] priority```
+   - Or use the Macro to have switch figure it out. ```spanning-tree vlan [vlan] root [primary | secondary]
+
+- Bridge ID contains...
+ - Bride Priority: 0-61440, in increments of 4096.  Default 1/2 @ 32768
+ - System ID Extension: 0-4095.
+ -- "MAC Address Reduction".  10 VLANs don't need 10 MAC address.  Take BID + Base MAC and offset it by System ID Extension.
+ -- Example BID for VLAN 1 using System ID Extension ```Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)```
+ - MAC Address
+
+2. Elect Root Port (RP) per bridge (upstream facing ports)
+- Each switch has only one RP per instance.
+
+- Root Bride creates and send Hello BPDU every Hello timer (2).
+  - Containts RBID, SBID both set to ID of the root, RPC of 0, and SPID value of the egress port.
+- Hellos received of RP of non-root bridge will resend Hellos out desinated ports. Updates fields before sending.  RPC, SBID, SPID, and MessageAge (increment by 1 usually).
+  - Hellos received on non-desinated ports aren't forwared (Root and Blocking ports).
+  
+
+
+3. Elect Designated ports (downstream facting ports)
+
+## Root Bridge Election
+1. Root Bridge ID (RBID)
+2. Root Path Cost (RPC)
+3. Sender Bridge ID (SBID)
+4. Sender Port ID (SPID)
+5. Receiver Port ID (RPID; not included in the BPDU, evaluated locally)
