@@ -1122,6 +1122,8 @@ Cisco's uses a PVST (Per-VLAN Spanning Tree), vs. ieee where all VLANs map to si
 
 ## General Operation
 
+Each port stores the best (that is, superior) BPDU it has received or sent itself. Designated Ports store the BPDU they send; Root and Blocking ports store the best BPDU they receive. The stored BPDU determines the role of the port and is used for comparisons.
+
 1. Elect Root bridge
 - Only one root bridge per instance.
 - Select the lowest Bridge ID (BID) in the network to become Root Bridge
@@ -1137,16 +1139,20 @@ Cisco's uses a PVST (Per-VLAN Spanning Tree), vs. ieee where all VLANs map to si
    - MAC Address
 
 2. Elect Root Port (RP) per bridge (upstream facing ports)
-- Each switch has only one RP per instance.
+- The result of this process is that each nonroot switch chooses exactly one port as its Root Port, as there is always only a single received Hello that is superior over all other received Hellos. 
 
 - Root Bride creates and send Hello BPDU every Hello timer (2).
   - Containts RBID, SBID both set to ID of the root, RPC of 0, and SPID value of the egress port.
 - Hellos received of RP of non-root bridge will resend Hellos out desinated ports. Updates fields before sending.  RPC, SBID, SPID, and MessageAge (increment by 1 usually).
   - Hellos received on non-desinated ports aren't forwared (Root and Blocking ports).
-  
-
+   - Hellos received on these ports would be inferior and pointless.
 
 3. Elect Designated ports (downstream facting ports)
+- Generally Think in terms of LAN segment and assume (full-duplex).  Half-duplex connected switch, maybe switch all uplinked to single hub, would be sharing same LAN segment.
+- A converged STP topology results in only one switch forwarding Hellos onto each LAN segment.
+- The Designated Switch in a segment would have the segment's DP (Designated Port) and send downlink the the other switches' RP.
+- Configuration BPDUs are sent out only from Designated Ports.  BPDUs sent from RP or Blocking ports would be worse so no point.
+
 
 ## Root Bridge Election
 1. Root Bridge ID (RBID)
@@ -1154,3 +1160,21 @@ Cisco's uses a PVST (Per-VLAN Spanning Tree), vs. ieee where all VLANs map to si
 3. Sender Bridge ID (SBID)
 4. Sender Port ID (SPID)
 5. Receiver Port ID (RPID; not included in the BPDU, evaluated locally)
+
+
+## STP Topology Change
+Considered a topology change when:
+
+- A Topology Change Notification BPDU is received by a Designated Port of a switch.
+- A port moves to the Forwarding state and the switch has at least one Designated Port (meaning that it is not a standalone switch with just a Root Port connected to an upstream switch and no other connected ports).
+- A port moves from Learning or Forwarding to Blocking.
+- A switch becomes the root switch.
+
+When such event takes place, the switches detecting change start orgininating BPDUs w/ updated contents.  This may result in few spanning-tree changes, but must be evaluated.
+
+## TCN (topology change notification) and Updating MAC/CAM Talbe
+In Cisco MAC and CAM table are same thing.
+
+- A switch processing a new BPDU may require aging out MAC table entries.
+  - STP can speed update MAC ageout.
+  - STP doesn't know what MAC needs updated, but knows what links are have changed which could invalidate MAC entries.
