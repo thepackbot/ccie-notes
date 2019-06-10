@@ -1173,8 +1173,21 @@ Considered a topology change when:
 When such event takes place, the switches detecting change start orgininating BPDUs w/ updated contents.  This may result in few spanning-tree changes, but must be evaluated.
 
 ## TCN (topology change notification) and Updating MAC/CAM Talbe
-In Cisco MAC and CAM table are same thing.
+In Cisco MAC and CAM table are same thing.  Default CAM entry timeout for Dynamic type addressess is 300 seconds.  A TCN greatly shortens the ageout time to prevent blackholing L2 traffic for a terribly long time.
 
 - A switch processing a new BPDU may require aging out MAC table entries.
   - STP can speed update MAC ageout.
   - STP doesn't know what MAC needs updated, but knows what links are have changed which could invalidate MAC entries.
+- If valid MACs get flushed due to this process it's not an issue.  The switch will continue to forward using uknown unicast methods (flooding), then rebuild entries when the MAC responds.
+
+- Updating CAMs during TCN:
+  - All switches need to the notificed to time out their 'apparently' unused CAM entries.
+  - Each switch needs to use short timer to time out the CAM entries.  This is equivalent to Forward Delay timer (default 15s).
+  
+Process:
+1. A topology chang event occurs on a port.
+2. After detecting the change, the switch sends TCN BPDU out it's RP.  Repeats message every hello timer until acknowledged.
+3. The Designated Switch for the LAN segment receives the TCN BPDU.  It sends back BPDU w/ TCN Acknoweldge bit set to the port the TCN BPDU originated from.
+4. The Designated switch then repeats steps 1 and 2, sending TCN BPDU out it's RP and waits for TCN Ack to come back.
+5. Root switch eventually receives the Change Notification, which it too sends back an ACK for. Now root bridge is aware of the change.
+6. For the next MaxAge+ForwardDelay seconds, the root switch will orginate BPDU's with the TC bit set.  This instruct all other switches (who weren't aware, because they live on other branches of tree) to shorten the aging time of CAM entries to ForwardDelay seconds.
