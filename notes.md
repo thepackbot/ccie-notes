@@ -1132,9 +1132,9 @@ Cisco's uses a PVST (Per-VLAN Spanning Tree), vs. ieee where all VLANs map to si
 - Bridge ID contains...
  - Bride Priority: 0-61440, in increments of 4096.  Default 1/2 @ 32768
  - System ID Extension: 0-4095.
- -- "MAC Address Reduction".  10 VLANs don't need 10 MAC address.  Take BID + Base MAC and offset it by System ID Extension.
- -- Example BID for VLAN 1 using System ID Extension ```Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)```
- - MAC Address
+   - "MAC Address Reduction".  10 VLANs don't need 10 MAC address.  Take BID + Base MAC and offset it by System ID Extension.
+   - Example BID for VLAN 1 using System ID Extension ```Bridge ID  Priority    32769  (priority 32768 sys-id-ext 1)```
+   - MAC Address
 
 2. Elect Root Port (RP) per bridge (upstream facing ports)
 - Each switch has only one RP per instance.
